@@ -1,74 +1,110 @@
-<style>
-body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 12px; }
-h1 { font-size: 20px; margin: 8px 0; text-align: center; } /* 標題置中 */
-
-/* 調整 filters 為橫向 */
-.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.filter-box { flex: 1 1 calc(50% - 8px); border: 1px solid #ddd; border-radius: 8px; padding: 6px; }
-.filter-title { font-size: 12px; margin-bottom: 2px; color: #666; }
-.filter-row { display: flex; gap: 4px; align-items: center; }
-select { flex: 1; padding: 4px; font-size: 14px; }
-.clear-btn { padding: 4px 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 4px; }
-
-/* 滿版按鈕 */
-.reset { width: 100%; padding: 10px; font-size: 16px; background: #0b2f6b; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; }
-
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-th { background: #f2f2f2; }
-.ratchet, .bit { color: #0b2f6b; font-weight: bold; }
-</style>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>陀螺COMBOS</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 12px; }
+        h1 { font-size: 20px; margin: 8px 0; text-align: center; }
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .filter-box { flex: 1 1 calc(45%); border: 1px solid #ddd; border-radius: 8px; padding: 6px; }
+        .filter-title { font-size: 12px; margin-bottom: 2px; color: #666; }
+        .filter-row { display: flex; gap: 4px; align-items: center; }
+        select { flex: 1; padding: 4px; font-size: 14px; min-width: 0; }
+        .clear-btn { padding: 4px 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 4px; }
+        .reset { width: 100%; padding: 12px; font-size: 16px; background: #0b2f6b; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #f2f2f2; }
+        .ratchet, .bit { color: #0b2f6b; font-weight: bold; }
+    </style>
+</head>
+<body>
 
 <h1>陀螺COMBOS</h1>
-
 <div id="status" style="font-size: 12px; color: #888; text-align: center;">載入中...</div>
 
 <div class="filters">
-    <div class="filter-box"><div class="filter-title">上蓋</div>
-        <div class="filter-row"><select id="cover" onchange="syncAndSearch('cover')"></select><button class="clear-btn" onclick="clearSync('cover')">×</button></div></div>
-    <div class="filter-box"><div class="filter-title">英文</div>
-        <div class="filter-row"><select id="english" onchange="syncAndSearch('english')"></select><button class="clear-btn" onclick="clearSync('english')">×</button></div></div>
-    <div class="filter-box"><div class="filter-title">固鎖</div>
-        <div class="filter-row"><select id="ratchet" onchange="search()"></select><button class="clear-btn" onclick="clearOne('ratchet')">×</button></div></div>
-    <div class="filter-box"><div class="filter-title">軸</div>
-        <div class="filter-row"><select id="bit" onchange="search()"></select><button class="clear-btn" onclick="clearOne('bit')">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">上蓋</div><div class="filter-row"><select id="cover" onchange="syncAndSearch('cover')"></select><button class="clear-btn" onclick="clearSync()">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">英文</div><div class="filter-row"><select id="english" onchange="syncAndSearch('english')"></select><button class="clear-btn" onclick="clearSync()">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">固鎖</div><div class="filter-row"><select id="ratchet" onchange="search()"></select><button class="clear-btn" onclick="clearOne('ratchet')">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">軸</div><div class="filter-row"><select id="bit" onchange="search()"></select><button class="clear-btn" onclick="clearOne('bit')">×</button></div></div>
 </div>
 
 <button class="reset" onclick="resetAll()">🔄 全部清除</button>
 <div id="result"></div>
 
 <script>
-// ... (保留你原有的 fetch 及 data 載入邏輯)
+    let allData = [], lock = false;
+    let mapENtoCover = {}, mapCovertoEN = {};
 
-// 修改聯動搜尋邏輯
-function syncAndSearch(changedId) {
-    lock = true;
-    const coverSel = document.getElementById("cover");
-    const englishSel = document.getElementById("english");
-    
-    if (changedId === "cover") {
-        englishSel.value = mapCovertoEN[coverSel.value] || "";
-    } else {
-        coverSel.value = mapENtoCover[englishSel.value] || "";
+    fetch("data.json")
+        .then(r => r.json())
+        .then(data => {
+            allData = data;
+            data.forEach(x => {
+                if(x["英文"] && x["上蓋"]){
+                    mapENtoCover[x["英文"]] = x["上蓋"];
+                    mapCovertoEN[x["上蓋"]] = x["英文"];
+                }
+            });
+            document.getElementById("status").innerText = "✅ 載入 " + data.length + " 筆";
+            buildSelect("cover", "上蓋");
+            buildSelect("english", "英文");
+            buildSelect("ratchet", "固鎖");
+            buildSelect("bit", "軸");
+            search();
+        });
+
+    function buildSelect(id, field) {
+        const select = document.getElementById(id);
+        const values = [...new Set(allData.map(x => x[field]))].filter(v => v).sort();
+        select.innerHTML = '<option value="">全部</option>';
+        values.forEach(v => select.innerHTML += `<option value="${v}">${v}</option>`);
     }
-    lock = false;
-    search();
-}
 
-function clearSync(id) {
-    document.getElementById("cover").value = "";
-    document.getElementById("english").value = "";
-    search();
-}
+    function syncAndSearch(changedId) {
+        if (lock) return;
+        lock = true;
+        const c = document.getElementById("cover"), e = document.getElementById("english");
+        if (changedId === "cover") e.value = mapCovertoEN[c.value] || "";
+        else c.value = mapENtoCover[e.value] || "";
+        lock = false;
+        search();
+    }
 
-function clearOne(id) {
-    document.getElementById(id).value = "";
-    search();
-}
+    function clearSync() {
+        document.getElementById("cover").value = "";
+        document.getElementById("english").value = "";
+        search();
+    }
 
-function resetAll() {
-    ["cover", "english", "ratchet", "bit"].forEach(id => document.getElementById(id).value = "");
-    search();
-}
-// ... (其餘 buildSelect 與 search 函數保持不變)
+    function clearOne(id) {
+        document.getElementById(id).value = "";
+        search();
+    }
+
+    function resetAll() {
+        ["cover", "english", "ratchet", "bit"].forEach(id => document.getElementById(id).value = "");
+        search();
+    }
+
+    function search() {
+        let rows = allData.filter(x => 
+            (!document.getElementById("cover").value || x["上蓋"] === document.getElementById("cover").value) &&
+            (!document.getElementById("english").value || x["英文"] === document.getElementById("english").value) &&
+            (!document.getElementById("ratchet").value || x["固鎖"] === document.getElementById("ratchet").value) &&
+            (!document.getElementById("bit").value || x["軸"] === document.getElementById("bit").value)
+        );
+        rows.sort((a,b) => new Date(b["日期"]) - new Date(a["日期"]));
+
+        let html = `<h2>結果 (${rows.length})</h2><table><tr><th>英文</th><th>上蓋</th><th>組合</th><th>名次</th><th>日期</th></tr>`;
+        rows.forEach(r => {
+            html += `<tr><td>${r["英文"]}</td><td>${r["上蓋"]}</td><td><span class="ratchet">${r["固鎖"]}</span> <span class="bit">${r["軸"]}</span></td><td>${r["名次"]==="1st"?"🏆":""}</td><td class="date">${r["日期"]}</td></tr>`;
+        });
+        document.getElementById("result").innerHTML = html + "</table>";
+    }
 </script>
+</body>
+</html>
