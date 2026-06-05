@@ -3,88 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>陀螺COMBOS111</title>
+    <title>陀螺COMBOS</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 10px; font-size: 13px; }
-        h1 { font-size: 18px; margin: 5px 0; text-align: center; }
-        /* 下拉選單列：強制同一列 */
-        .filter-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
-        .filter-item { display: flex; align-items: center; gap: 4px; flex: 1; }
-        select { height: 26px; flex-grow: 1; padding: 0 4px; }
-        /* 結果標題區塊 */
-        .header-group { display: flex; align-items: center; gap: 10px; margin: 10px 0; border-top: 1px solid #ddd; padding-top: 8px; }
-        h2 { margin: 0; font-size: 15px; }
-        .stats { font-weight: bold; flex-grow: 1; }
-        #clearBtn { padding: 4px 10px; cursor: pointer; background: #0b2f6b; color: white; border: none; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 12px; }
+        h1 { font-size: 20px; margin: 8px 0; text-align: center; }
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .filter-box { flex: 1 1 45%; border: 1px solid #ddd; border-radius: 8px; padding: 6px; }
+        .filter-title { font-size: 12px; margin-bottom: 2px; color: #666; }
+        .filter-row { display: flex; gap: 4px; align-items: center; }
+        select { flex: 1; padding: 4px; font-size: 14px; min-width: 0; }
+        .clear-btn { padding: 4px 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 4px; }
+        .reset { width: 100%; padding: 12px; font-size: 16px; background: #0b2f6b; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background: #f2f2f2; }
+        .ratchet, .bit { color: #0b2f6b; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <h1>陀螺COMBOS</h1>
-<div id="status" style="font-size: 11px; color: #888; text-align: center;">載入中...</div>
+<div id="status" style="font-size: 12px; color: #888; text-align: center;">載入中...</div>
 
-<div class="filter-row">
-    <div class="filter-item"><label>上蓋</label><select id="cover" onchange="syncAndSearch('cover')"></select></div>
-    <div class="filter-item"><label>英文</label><select id="english" onchange="syncAndSearch('english')"></select></div>
-</div>
-<div class="filter-row">
-    <div class="filter-item"><label>固鎖</label><select id="ratchet" onchange="search()"></select></div>
-    <div class="filter-item"><label>軸</label><select id="bit" onchange="search()"></select></div>
+<div class="filters">
+    <div class="filter-box"><div class="filter-title">上蓋</div><div class="filter-row"><select id="cover" onchange="sync('cover')"></select><button class="clear-btn" onclick="clearAll()">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">英文</div><div class="filter-row"><select id="english" onchange="sync('english')"></select><button class="clear-btn" onclick="clearAll()">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">固鎖</div><div class="filter-row"><select id="ratchet" onchange="search()"></select><button class="clear-btn" onclick="clearOne('ratchet')">×</button></div></div>
+    <div class="filter-box"><div class="filter-title">軸</div><div class="filter-row"><select id="bit" onchange="search()"></select><button class="clear-btn" onclick="clearOne('bit')">×</button></div></div>
 </div>
 
-<div class="header-group">
-    <h2>查詢結果</h2>
-    <div class="stats" id="count">搜尋比數: 0</div>
-    <button id="clearBtn" onclick="resetAll()">✕ 全部清除</button>
-</div>
-
+<button class="reset" onclick="resetAll()">🔄 全部清除</button>
 <div id="result"></div>
 
 <script>
-    let allData = [], lock = false;
-    let mapENtoCover = {}, mapCovertoEN = {};
+    let allData = [];
+    let mapEC = {}, mapCE = {};
 
-    fetch("data.json").then(r => r.json()).then(data => {
-        allData = data;
-        data.forEach(x => {
-            if(x["英文"] && x["上蓋"]){
-                mapENtoCover[x["英文"]] = x["上蓋"];
-                mapCovertoEN[x["上蓋"]] = x["英文"];
-            }
+    fetch("data.json")
+        .then(r => r.json())
+        .then(data => {
+            allData = data;
+            data.forEach(x => {
+                if(x["英文"] && x["上蓋"]) {
+                    mapEC[x["英文"]] = x["上蓋"];
+                    mapCE[x["上蓋"]] = x["英文"];
+                }
+            });
+            document.getElementById("status").innerText = "✅ 載入 " + data.length + " 筆";
+            renderSelects();
+            search();
         });
-        document.getElementById("status").innerText = "✅ 載入完成";
-        buildSelect("cover", "上蓋", true);
-        buildSelect("english", "英文", false);
-        buildSelect("ratchet", "固鎖", false);
-        buildSelect("bit", "軸", true);
-        search();
-    });
 
-    function buildSelect(id, field, sortByCount) {
-        const select = document.getElementById(id);
-        let values;
-        if (sortByCount) {
-            const counts = allData.reduce((acc, x) => { acc[x[field]] = (acc[x[field]] || 0) + 1; return acc; }, {});
-            values = Object.keys(counts).filter(v => v).sort((a, b) => counts[b] - counts[a]);
-        } else {
-            values = [...new Set(allData.map(x => x[field]))].filter(v => v).sort();
+    function renderSelects() {
+        const fields = { "cover": "上蓋", "english": "英文", "ratchet": "固鎖", "bit": "軸" };
+        for (let id in fields) {
+            const select = document.getElementById(id);
+            const vals = [...new Set(allData.map(x => x[fields[id]]))].filter(v => v).sort();
+            select.innerHTML = '<option value="">全部</option>' + vals.map(v => `<option value="${v}">${v}</option>`).join('');
         }
-        select.innerHTML = '<option value="">全部</option>';
-        values.forEach(v => select.innerHTML += `<option value="${v}">${v}</option>`);
     }
 
-    function syncAndSearch(changedId) {
-        if (lock) return;
-        lock = true;
+    function sync(type) {
         const c = document.getElementById("cover"), e = document.getElementById("english");
-        if (changedId === "cover") e.value = mapCovertoEN[c.value] || "";
-        else c.value = mapENtoCover[e.value] || "";
-        lock = false;
+        if (type === 'cover') e.value = mapCE[c.value] || "";
+        else c.value = mapEC[e.value] || "";
         search();
     }
+
+    function clearAll() {
+        document.getElementById("cover").value = "";
+        document.getElementById("english").value = "";
+        search();
+    }
+
+    function clearOne(id) { document.getElementById(id).value = ""; search(); }
 
     function resetAll() {
         ["cover", "english", "ratchet", "bit"].forEach(id => document.getElementById(id).value = "");
@@ -92,18 +84,18 @@
     }
 
     function search() {
+        const cVal = document.getElementById("cover").value, eVal = document.getElementById("english").value, 
+              rVal = document.getElementById("ratchet").value, bVal = document.getElementById("bit").value;
+        
         let rows = allData.filter(x => 
-            (!document.getElementById("cover").value || x["上蓋"] === document.getElementById("cover").value) &&
-            (!document.getElementById("english").value || x["英文"] === document.getElementById("english").value) &&
-            (!document.getElementById("ratchet").value || x["固鎖"] === document.getElementById("ratchet").value) &&
-            (!document.getElementById("bit").value || x["軸"] === document.getElementById("bit").value)
+            (!cVal || x["上蓋"] === cVal) && (!eVal || x["英文"] === eVal) &&
+            (!rVal || x["固鎖"] === rVal) && (!bVal || x["軸"] === bVal)
         );
         rows.sort((a,b) => new Date(b["日期"]) - new Date(a["日期"]));
-        
-        document.getElementById("count").innerText = "搜尋比數: " + rows.length;
-        let html = `<table><tr><th>英文</th><th>上蓋</th><th>組合</th><th>名次</th><th>日期</th></tr>`;
+
+        let html = `<h2>結果 (${rows.length})</h2><table><tr><th>英文</th><th>上蓋</th><th>組合</th><th>名次</th><th>日期</th></tr>`;
         rows.forEach(r => {
-            html += `<tr><td>${r["英文"]}</td><td>${r["上蓋"]}</td><td>${r["固鎖"]} ${r["軸"]}</td><td>${r["名次"]==="1st"?"🏆":""}</td><td>${r["日期"]}</td></tr>`;
+            html += `<tr><td>${r["英文"]}</td><td>${r["上蓋"]}</td><td><span class="ratchet">${r["固鎖"]}</span> <span class="bit">${r["軸"]}</span></td><td>${r["名次"]==="1st"?"🏆":""}</td><td>${r["日期"]}</td></tr>`;
         });
         document.getElementById("result").innerHTML = html + "</table>";
     }
