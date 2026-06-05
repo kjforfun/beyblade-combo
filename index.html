@@ -3,378 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>陀螺COMBOS</title>
-
+<title>陀螺COMBOS V2</title>
 <style>
-body{
-    font-family:Arial,sans-serif;
-    max-width:900px;
-    margin:auto;
-    padding:8px;
-}
-
-.topbar{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:8px;
-    flex-wrap:wrap;
-}
-
-h1{
-    margin:0;
-    font-size:18px;
-}
-
-.reset{
-    padding:6px 10px;
-    border:none;
-    border-radius:6px;
-    background:#0b2f6b;
-    color:white;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-#status{
-    font-size:13px;
-    color:#666;
-    font-weight:bold;
-}
-
-.filters{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    margin-bottom:10px;
-}
-
-.filter-line{
-    display:flex;
-    gap:4px;
-    align-items:center;
-}
-
-.filter-line label{
-    font-size:13px;
-    white-space:nowrap;
-}
-
-select{
-    flex:1;
-    min-width:0;
-    padding:5px;
-    font-size:14px;
-}
-
-.clear-btn{
-    padding:4px 8px;
-    background:#eee;
-    border:1px solid #ccc;
-    border-radius:4px;
-    cursor:pointer;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:13px;
-}
-
-th,td{
-    border:1px solid #ddd;
-    padding:5px;
-    text-align:center;
-}
-
-th{
-    background:#f3f3f3;
-}
-
-.blade{
-    text-align:left;
-    white-space:nowrap;
-}
-
-.combo{
-    font-weight:bold;
-    color:#0b2f6b;
-    white-space:nowrap;
-}
-
-.rank{
-    width:50px;
-    white-space:nowrap;
-}
-
-.date{
-    font-size:11px;
-    color:#888;
-    white-space:nowrap;
-    width:70px;
-}
-
-@media(max-width:600px){
-
-    body{
-        padding:6px;
-    }
-
-    h1{
-        font-size:16px;
-    }
-
-    table{
-        font-size:12px;
-    }
-
-    th,td{
-        padding:4px;
-    }
-
-    .date{
-        font-size:10px;
-    }
-
-    select{
-        font-size:13px;
-    }
-}
+body{font-family:Arial,sans-serif;max-width:900px;margin:auto;padding:8px}
+h1{margin:0;font-size:18px}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.reset{padding:6px 10px;border:none;border-radius:6px;background:#0b2f6b;color:#fff;font-weight:bold}
+#status{font-size:13px;font-weight:bold;color:#666}
+.stats{border:1px solid #ddd;border-radius:6px;padding:6px;margin:8px 0;font-size:12px}
+.stat-row{display:flex;justify-content:space-between;gap:8px}
+.filters{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.filter-line{display:flex;gap:4px;align-items:center}
+select{flex:1;padding:5px}
+.clear-btn{padding:4px 8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #ddd;padding:5px;text-align:center}
+th{background:#f3f3f3}
+.blade{text-align:left;white-space:nowrap}
+.ratchet-color{color:#006400;font-weight:bold}
+.bit-color{color:#0b2f6b;font-weight:bold}
+.date{font-size:11px;color:#888;white-space:nowrap}
 </style>
 </head>
-
 <body>
 
 <div class="topbar">
-    <h1>陀螺COMBOS</h1>
-
-    <button class="reset" onclick="resetAll()">
-        🔄 全部清除
-    </button>
-
-    <span id="status">
-        結果：0
-    </span>
+<h1>陀螺COMBOS</h1>
+<button class="reset" onclick="resetAll()">🔄 全部清除</button>
+<span id="status">結果：0</span>
 </div>
 
+<div id="stats"></div>
+
 <div class="filters">
+<div class="filter-line">
+<label>上蓋</label>
+<select id="cover" onchange="search()"></select>
+<button class="clear-btn" onclick="clearCover()">×</button>
+</div>
 
-    <div class="filter-line">
-        <label>上蓋</label>
-
-        <select id="cover" onchange="search()"></select>
-
-        <button class="clear-btn" onclick="clearCover()">
-            ×
-        </button>
-    </div>
-
-    <div class="filter-line">
-
-        <label>固鎖</label>
-
-        <select id="ratchet" onchange="search()"></select>
-
-        <label>軸</label>
-
-        <select id="bit" onchange="search()"></select>
-
-        <button class="clear-btn" onclick="clearRB()">
-            ×
-        </button>
-
-    </div>
-
+<div class="filter-line">
+<label>固鎖</label>
+<select id="ratchet" onchange="search()"></select>
+<label>軸</label>
+<select id="bit" onchange="search()"></select>
+<button class="clear-btn" onclick="clearRB()">×</button>
+</div>
 </div>
 
 <div id="result"></div>
 
 <script>
-
 let allData=[];
 
 fetch("data.json")
 .then(r=>r.json())
 .then(data=>{
-
-    allData=data;
-
-    renderSelects(allData);
-
-    search();
+ allData=data;
+ renderSelects();
+ search();
 });
 
-function renderSelects(source){
-
-    const currentCover=document.getElementById("cover")?.value || "";
-    const currentRatchet=document.getElementById("ratchet")?.value || "";
-    const currentBit=document.getElementById("bit")?.value || "";
-
-    const coverVals=[
-        ...new Set(
-            source.map(x=>
-                `${x["上蓋"]}|||${x["英文"]}`
-            )
-        )
-    ].sort();
-
-    document.getElementById("cover").innerHTML=
-        '<option value="">全部</option>'+
-        coverVals.map(v=>{
-
-            const parts=v.split("|||");
-
-            return `
-            <option value="${v}"
-            ${v===currentCover?'selected':''}>
-            ${parts[0]} (${parts[1]})
-            </option>
-            `;
-        }).join('');
-
-    const ratchets=[
-        ...new Set(
-            source.map(x=>x["固鎖"])
-        )
-    ].filter(Boolean).sort();
-
-    document.getElementById("ratchet").innerHTML=
-        '<option value="">全部</option>'+
-        ratchets.map(v=>
-            `<option value="${v}"
-            ${v===currentRatchet?'selected':''}>
-            ${v}
-            </option>`
-        ).join('');
-
-    const bits=[
-        ...new Set(
-            source.map(x=>x["軸"])
-        )
-    ].filter(Boolean).sort();
-
-    document.getElementById("bit").innerHTML=
-        '<option value="">全部</option>'+
-        bits.map(v=>
-            `<option value="${v}"
-            ${v===currentBit?'selected':''}>
-            ${v}
-            </option>`
-        ).join('');
+function sortByFrequency(arr){
+ const c={};
+ arr.forEach(v=>c[v]=(c[v]||0)+1);
+ return [...new Set(arr)].sort((a,b)=>c[b]-c[a]);
 }
 
-function clearCover(){
+function renderSelects(){
+ const cv=document.getElementById("cover")?.value||"";
+ const rv=document.getElementById("ratchet")?.value||"";
+ const bv=document.getElementById("bit")?.value||"";
 
-    document.getElementById("cover").value="";
+ const covers=sortByFrequency(allData.map(x=>`${x["上蓋"]}|||${x["英文"]}`));
+ document.getElementById("cover").innerHTML='<option value="">全部</option>'+covers.map(v=>{
+  const p=v.split("|||");
+  return `<option value="${v}" ${v===cv?'selected':''}>${p[0]} (${p[1]})</option>`;
+ }).join('');
 
-    search();
+ const ratchets=[...new Set(allData.map(x=>x["固鎖"]))].filter(Boolean).sort((a,b)=>parseInt(a)-parseInt(b));
+ document.getElementById("ratchet").innerHTML='<option value="">全部</option>'+ratchets.map(v=>`<option value="${v}" ${v===rv?'selected':''}>${v}</option>`).join('');
+
+ const bits=sortByFrequency(allData.map(x=>x["軸"]).filter(Boolean));
+ document.getElementById("bit").innerHTML='<option value="">全部</option>'+bits.map(v=>`<option value="${v}" ${v===bv?'selected':''}>${v}</option>`).join('');
 }
 
-function clearRB(){
+function clearCover(){document.getElementById("cover").value="";search();}
+function clearRB(){document.getElementById("ratchet").value="";document.getElementById("bit").value="";search();}
+function resetAll(){cover.value="";ratchet.value="";bit.value="";search();}
+function rankText(r){return r==="1st"?"🏆":(r||"");}
 
-    document.getElementById("ratchet").value="";
-    document.getElementById("bit").value="";
+function buildStats(){
+ const combo={}, rat={}, bit={};
+ allData.forEach(x=>{
+  const k=`${x["上蓋"]} ${x["固鎖"]}${x["軸"]}`;
+  combo[k]=(combo[k]||0)+1;
+  rat[x["固鎖"]]=(rat[x["固鎖"]]||0)+1;
+  bit[x["軸"]]=(bit[x["軸"]]||0)+1;
+ });
+ const top=Object.entries(combo).sort((a,b)=>b[1]-a[1]).slice(0,3);
+ const topRat=Object.entries(rat).sort((a,b)=>b[1]-a[1])[0]?.[0]||"-";
+ const topBit=Object.entries(bit).sort((a,b)=>b[1]-a[1])[0]?.[0]||"-";
 
-    search();
-}
-
-function resetAll(){
-
-    document.getElementById("cover").value="";
-    document.getElementById("ratchet").value="";
-    document.getElementById("bit").value="";
-
-    renderSelects(allData);
-
-    search();
-}
-
-function rankText(rank){
-
-    if(rank==="1st") return "🏆";
-
-    return rank || "";
+ document.getElementById("stats").innerHTML=`
+ <div class="stats">
+ <div class="stat-row"><span>🔥 1. ${top[0]?.[0]||""} (${top[0]?.[1]||0}次)</span><span>最常固鎖:${topRat}</span></div>
+ <div class="stat-row"><span>2. ${top[1]?.[0]||""} (${top[1]?.[1]||0}次)</span><span>最常軸:${topBit}</span></div>
+ <div class="stat-row"><span>3. ${top[2]?.[0]||""} (${top[2]?.[1]||0}次)</span><span></span></div>
+ </div>`;
 }
 
 function search(){
+ renderSelects();
 
-    const cover=document.getElementById("cover").value;
-    const ratchet=document.getElementById("ratchet").value;
-    const bit=document.getElementById("bit").value;
+ const cover=cover=document.getElementById("cover").value;
+ const ratchet=document.getElementById("ratchet").value;
+ const bit=document.getElementById("bit").value;
 
-    let rows=allData.filter(x=>{
+ let rows=allData.filter(x=>{
+   let ok=true;
+   if(cover){
+    const p=cover.split("|||");
+    ok=x["上蓋"]===p[0]&&x["英文"]===p[1];
+   }
+   return ok && (!ratchet||x["固鎖"]===ratchet) && (!bit||x["軸"]===bit);
+ });
 
-        let coverMatch=true;
+ rows.sort((a,b)=>new Date(b["日期"])-new Date(a["日期"]));
 
-        if(cover){
+ document.getElementById("status").innerText=`結果：${rows.length}`;
+ buildStats();
 
-            const parts=cover.split("|||");
-
-            coverMatch=
-                x["上蓋"]===parts[0] &&
-                x["英文"]===parts[1];
-        }
-
-        return (
-            coverMatch &&
-            (!ratchet || x["固鎖"]===ratchet) &&
-            (!bit || x["軸"]===bit)
-        );
-    });
-
-    rows.sort(
-        (a,b)=>
-        new Date(b["日期"])-
-        new Date(a["日期"])
-    );
-
-    renderSelects(rows.length ? rows : allData);
-
-    document.getElementById("status").innerText=
-        `結果：${rows.length}`;
-
-    let html=`
-    <table>
-
-    <tr>
-        <th>陀螺</th>
-        <th>組合</th>
-        <th>名次</th>
-        <th>日期</th>
-    </tr>
-    `;
-
-    rows.forEach(r=>{
-
-        html+=`
-        <tr>
-
-            <td class="blade">
-                ${r["上蓋"]} (${r["英文"]})
-            </td>
-
-            <td class="combo">
-                ${r["固鎖"]}${r["軸"]}
-            </td>
-
-            <td class="rank">
-                ${rankText(r["名次"])}
-            </td>
-
-            <td class="date">
-                ${r["日期"] || ""}
-            </td>
-
-        </tr>
-        `;
-    });
-
-    html+=`</table>`;
-
-    document.getElementById("result").innerHTML=html;
+ let html='<table><tr><th>陀螺</th><th>組合</th><th>名次</th><th>日期</th></tr>';
+ rows.forEach(r=>{
+   html+=`<tr>
+   <td class="blade">${r["上蓋"]} (${r["英文"]})</td>
+   <td><span class="ratchet-color">${r["固鎖"]}</span><span class="bit-color">${r["軸"]}</span></td>
+   <td>${rankText(r["名次"])}</td>
+   <td class="date">${r["日期"]||""}</td>
+   </tr>`;
+ });
+ html+='</table>';
+ document.getElementById("result").innerHTML=html;
 }
-
 </script>
-
 </body>
 </html>
