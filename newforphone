@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beyblade Combo NEW UI</title>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    margin:0;
+    padding:12px;
+    background:#f5f6f8;
+}
+
+/* header */
+h1{
+    font-size:18px;
+    margin:6px 0 10px 0;
+}
+
+/* filter bar */
+.filters{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.filter-box{
+    background:white;
+    border-radius:10px;
+    padding:8px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+
+.filter-row{
+    display:flex;
+    gap:6px;
+}
+
+select{
+    flex:1;
+    padding:6px;
+    font-size:14px;
+}
+
+button{
+    font-size:12px;
+    padding:5px 8px;
+}
+
+/* card layout */
+.card{
+    background:white;
+    border-radius:12px;
+    padding:10px;
+    margin-bottom:10px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+    cursor:pointer;
+}
+
+/* top row */
+.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* title */
+.title{
+    font-weight:bold;
+    font-size:14px;
+}
+
+/* combo */
+.combo{
+    margin-top:6px;
+    font-size:16px;
+    font-weight:bold;
+}
+
+.ratchet{
+    color:#0b2f6b;
+}
+
+.bit{
+    color:#0b2f6b;
+}
+
+/* meta */
+.meta{
+    margin-top:6px;
+    font-size:12px;
+    color:#666;
+    display:flex;
+    justify-content:space-between;
+}
+
+/* trophy */
+.trophy{
+    font-size:18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>⚔ Beyblade NEW UI</h1>
+
+<div id="status">載入中...</div>
+
+<div class="filters">
+
+<div class="filter-box">
+    <div class="filter-row">
+        <select id="cover"></select>
+        <button onclick="clearOne('cover')">清除</button>
+    </div>
+</div>
+
+<div class="filter-box">
+    <div class="filter-row">
+        <select id="english"></select>
+        <button onclick="clearOne('english')">清除</button>
+    </div>
+</div>
+
+<div class="filter-box">
+    <div class="filter-row">
+        <select id="ratchet"></select>
+        <button onclick="clearOne('ratchet')">清除</button>
+    </div>
+</div>
+
+<div class="filter-box">
+    <div class="filter-row">
+        <select id="bit"></select>
+        <button onclick="clearOne('bit')">清除</button>
+    </div>
+</div>
+
+</div>
+
+<button onclick="resetAll()">🔄 全部清除</button>
+
+<div id="result"></div>
+
+<script>
+
+let allData=[];
+let lock=false;
+let mapENtoCover={};
+let mapCovertoEN={};
+
+fetch("data.json")
+.then(r=>r.json())
+.then(data=>{
+
+    allData=data;
+
+    data.forEach(x=>{
+        if(x["英文"] && x["上蓋"]){
+            mapENtoCover[x["英文"]] = x["上蓋"];
+            mapCovertoEN[x["上蓋"]] = x["英文"];
+        }
+    });
+
+    document.getElementById("status").innerText =
+        "✅ loaded " + data.length;
+
+    buildSelect("cover","上蓋");
+    buildSelect("english","英文");
+    buildSelect("ratchet","固鎖");
+    buildSelect("bit","軸");
+
+    attachBinding();
+    search();
+
+});
+
+function buildSelect(id, field){
+
+    const select=document.getElementById(id);
+
+    const count={};
+
+    allData.forEach(x=>{
+        const v=x[field];
+        if(!v) return;
+        count[v]=(count[v]||0)+1;
+    });
+
+    const values=Object.entries(count)
+        .sort((a,b)=>b[1]-a[1])
+        .map(x=>x[0]);
+
+    select.innerHTML='<option value="">全部</option>';
+
+    values.forEach(v=>{
+        select.innerHTML+=`<option value="${v}">${v}</option>`;
+    });
+
+    select.addEventListener("change",search);
+}
+
+function attachBinding(){
+
+    document.getElementById("english").addEventListener("change",e=>{
+        if(lock) return;
+        lock=true;
+        document.getElementById("cover").value =
+            mapENtoCover[e.target.value] || "";
+        lock=false;
+    });
+
+    document.getElementById("cover").addEventListener("change",e=>{
+        if(lock) return;
+        lock=true;
+        document.getElementById("english").value =
+            mapCovertoEN[e.target.value] || "";
+        lock=false;
+    });
+}
+
+function clearOne(id){
+    document.getElementById(id).value="";
+    search();
+}
+
+function resetAll(){
+    ["cover","english","ratchet","bit"].forEach(id=>{
+        document.getElementById(id).value="";
+    });
+    search();
+}
+
+function search(){
+
+    let rows=[...allData];
+
+    const cover=document.getElementById("cover").value;
+    const english=document.getElementById("english").value;
+    const ratchet=document.getElementById("ratchet").value;
+    const bit=document.getElementById("bit").value;
+
+    if(cover) rows=rows.filter(x=>x["上蓋"]===cover);
+    if(english) rows=rows.filter(x=>x["英文"]===english);
+    if(ratchet) rows=rows.filter(x=>x["固鎖"]===ratchet);
+    if(bit) rows=rows.filter(x=>x["軸"]===bit);
+
+    rows.sort((a,b)=>new Date(b["日期"]) - new Date(a["日期"]));
+
+    let html="";
+
+    rows.forEach(r=>{
+
+        let trophy="";
+        if(r["名次"]==="1st") trophy="🏆";
+
+        html+=`
+        <div class="card" onclick="copy('${r["英文"]} | ${r["上蓋"]}')">
+            <div class="top">
+                <div class="title">${r["英文"] || ""}</div>
+                <div class="trophy">${trophy}</div>
+            </div>
+
+            <div>${r["上蓋"] || ""}</div>
+
+            <div class="combo">
+                <span class="ratchet">${r["固鎖"] || ""}</span>
+                <span class="bit">${r["軸"] || ""}</span>
+            </div>
+
+            <div class="meta">
+                <div>${r["名次"] || ""}</div>
+                <div>${r["日期"] || ""}</div>
+            </div>
+        </div>
+        `;
+    });
+
+    document.getElementById("result").innerHTML=html;
+}
+
+function copy(text){
+    navigator.clipboard.writeText(text);
+}
+
+</script>
+
+</body>
+</html>
