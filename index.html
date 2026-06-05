@@ -3,142 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>陀螺資料庫 DEMO v2</title>
+<title>Beyblade Combo</title>
+
 <style>
-body{font-family:Arial,sans-serif;max-width:1200px;margin:auto;padding:20px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-select,input,button{padding:8px;width:100%}
-table{width:100%;border-collapse:collapse;margin-top:20px}
-th,td{border:1px solid #ccc;padding:8px;text-align:left}
-th{background:#eee}
-.box{margin-top:20px;padding:12px;background:#f5f5f5}
+body{
+    font-family: Arial,sans-serif;
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+.card{
+    border:1px solid #ddd;
+    padding:20px;
+    border-radius:8px;
+}
 </style>
+
 </head>
 <body>
 
-<h2>陀螺得獎資料庫 DEMO v2</h2>
+<h1>Beyblade Combo</h1>
 
-<div class="grid">
-<div>
-<label>中文</label>
-<select id="cn">
-<option value="">全部</option>
-<option>小飛龍</option>
-<option>蒼穹龍騎士</option>
-<option>神杖</option>
-</select>
+<div class="card">
+    <h3>資料載入狀態</h3>
+    <div id="status">載入中...</div>
 </div>
-
-<div>
-<label>英文</label>
-<select id="en">
-<option value="">全部</option>
-<option>WyvernGale</option>
-<option>CobaltDragoon</option>
-<option>WizardRod</option>
-</select>
-</div>
-
-<div>
-<label>固鎖</label>
-<select id="ratchet">
-<option value="">全部</option>
-<option>1-60</option>
-<option>3-60</option>
-<option>5-70</option>
-<option>9-60</option>
-</select>
-</div>
-
-<div>
-<label>軸心</label>
-<select id="bit">
-<option value="">全部</option>
-<option>R</option>
-<option>LR</option>
-<option>H</option>
-<option>K</option>
-</select>
-</div>
-</div>
-
-<br>
-
-<input id="keyword" placeholder="找不到再輸入關鍵字搜尋">
-
-<br><br>
-
-<button onclick="search()">查詢</button>
-
-<div id="result"></div>
 
 <script>
-const data=[
-{英文:"WyvernGale",中文:"小飛龍",固鎖:"3-60",軸:"R",名次:"3rd",日期:"2026/3/2"},
-{英文:"WyvernGale",中文:"小飛龍",固鎖:"1-80",軸:"LR",名次:"1st",日期:"2025/10/18"},
-{英文:"WyvernGale",中文:"小飛龍",固鎖:"1-60",軸:"K",名次:"3rd",日期:"2025/8/23"},
-{英文:"WyvernGale",中文:"小飛龍",固鎖:"5-70",軸:"H",名次:"3rd",日期:"2025/7/26"},
-{英文:"CobaltDragoon",中文:"蒼穹龍騎士",固鎖:"9-60",軸:"E",名次:"1st",日期:"2026/5/1"}
-];
 
-function search(){
+fetch("data.json")
+.then(r => r.json())
+.then(data => {
 
-let rows=data;
+    document.getElementById("status").innerHTML =
+        "✅ 成功載入 " + data.length + " 筆資料";
 
-const cn=document.getElementById('cn').value;
-const en=document.getElementById('en').value;
-const ratchet=document.getElementById('ratchet').value;
-const bit=document.getElementById('bit').value;
-const keyword=document.getElementById('keyword').value.trim();
+    console.log(data);
 
-if(cn) rows=rows.filter(x=>x.中文===cn);
-if(en) rows=rows.filter(x=>x.英文===en);
-if(ratchet) rows=rows.filter(x=>x.固鎖===ratchet);
-if(bit) rows=rows.filter(x=>x.軸===bit);
+})
+.catch(err => {
 
-if(keyword){
-rows=rows.filter(x=>
-Object.values(x).join(' ').includes(keyword)
-);
-}
+    document.getElementById("status").innerHTML =
+        "❌ 載入失敗";
 
-let html=""
+    console.error(err);
 
-html += "<h3>查詢結果 ("+rows.length+"筆)</h3>";
-html += "<table><tr><th>英文</th><th>中文</th><th>固鎖</th><th>軸</th><th>名次</th><th>日期</th></tr>";
-
-rows.forEach(r=>{
-html += `<tr>
-<td>${r.英文}</td>
-<td>${r.中文}</td>
-<td>${r.固鎖}</td>
-<td>${r.軸}</td>
-<td>${r.名次}</td>
-<td>${r.日期}</td>
-</tr>`;
 });
 
-html += "</table>";
-
-const stat={};
-
-rows.forEach(r=>{
-const k=r.固鎖+" "+r.軸;
-stat[k]=(stat[k]||0)+1;
-});
-
-const rank=Object.entries(stat).sort((a,b)=>b[1]-a[1]);
-
-html += "<div class='box'><h3>最常搭配組合</h3>";
-
-rank.forEach((r,i)=>{
-html += (i+1)+". "+r[0]+" ("+r[1]+"次)<br>";
-});
-
-html += "</div>";
-
-document.getElementById('result').innerHTML=html;
-}
 </script>
 
 </body>
