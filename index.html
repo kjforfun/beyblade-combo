@@ -13,13 +13,11 @@ body{
     padding:20px;
 }
 
-h1{
-    margin-bottom:20px;
-}
+h1{margin-bottom:20px;}
 
 .filters{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(2,1fr);
     gap:10px;
 }
 
@@ -29,15 +27,25 @@ h1{
     border-radius:8px;
 }
 
+.filter-row{
+    display:flex;
+    gap:6px;
+    align-items:center;
+}
+
 select{
-    width:100%;
+    flex:1;
     padding:8px;
 }
 
 button{
-    padding:8px 12px;
+    padding:6px 10px;
     cursor:pointer;
-    margin-top:5px;
+    white-space:nowrap;
+}
+
+.reset{
+    margin-top:15px;
 }
 
 table{
@@ -52,9 +60,7 @@ th,td{
     text-align:left;
 }
 
-th{
-    background:#f2f2f2;
-}
+th{background:#f2f2f2;}
 
 .box{
     background:#f7f7f7;
@@ -63,10 +69,18 @@ th{
     border-radius:8px;
 }
 
-.reset{
-    margin-top:15px;
+/* 7-60H 顏色 */
+.ratchet{
+    color:#0b6b3a;
+    font-weight:bold;
 }
 
+.bit{
+    color:#9acd32;
+    font-weight:bold;
+}
+
+/* 手機優化 */
 @media(max-width:900px){
     .filters{
         grid-template-columns:1fr;
@@ -84,44 +98,63 @@ th{
 <div class="filters">
 
 <div class="filter-box">
-    <b>上蓋</b><br>
-    <select id="cover"></select>
-    <button onclick="clearOne('cover')">❌ 清除</button>
+    <b>上蓋</b>
+    <div class="filter-row">
+        <select id="cover"></select>
+        <button onclick="clearOne('cover')">清除</button>
+    </div>
 </div>
 
 <div class="filter-box">
-    <b>英文</b><br>
-    <select id="english"></select>
-    <button onclick="clearOne('english')">❌ 清除</button>
+    <b>英文</b>
+    <div class="filter-row">
+        <select id="english"></select>
+        <button onclick="clearOne('english')">清除</button>
+    </div>
 </div>
 
 <div class="filter-box">
-    <b>固鎖</b><br>
-    <select id="ratchet"></select>
-    <button onclick="clearOne('ratchet')">❌ 清除</button>
+    <b>固鎖</b>
+    <div class="filter-row">
+        <select id="ratchet"></select>
+        <button onclick="clearOne('ratchet')">清除</button>
+    </div>
 </div>
 
 <div class="filter-box">
-    <b>軸</b><br>
-    <select id="bit"></select>
-    <button onclick="clearOne('bit')">❌ 清除</button>
+    <b>軸</b>
+    <div class="filter-row">
+        <select id="bit"></select>
+        <button onclick="clearOne('bit')">清除</button>
+    </div>
 </div>
 
 </div>
 
-<button class="reset" onclick="resetAll()">🔄 重設全部條件</button>
+<button class="reset" onclick="resetAll()">🔄 全部清除</button>
 
 <div id="result"></div>
 
 <script>
 
 let allData=[];
+let lock=false;
+let mapENtoCover={};
+let mapCovertoEN={};
 
 fetch("data.json")
 .then(r=>r.json())
 .then(data=>{
 
     allData=data;
+
+    // 建立唯一對應（英文 ↔ 上蓋）
+    data.forEach(x=>{
+        if(x["英文"] && x["上蓋"]){
+            mapENtoCover[x["英文"]] = x["上蓋"];
+            mapCovertoEN[x["上蓋"]] = x["英文"];
+        }
+    });
 
     document.getElementById("status").innerHTML=
         "✅ 成功載入 "+data.length+" 筆資料";
@@ -131,6 +164,7 @@ fetch("data.json")
     buildSelect("ratchet","固鎖");
     buildSelect("bit","軸");
 
+    attachBinding();
     search();
 
 });
@@ -139,37 +173,50 @@ function buildSelect(id,field){
 
     const select=document.getElementById(id);
 
-    const values=[
-        ...new Set(
-            allData
-            .map(x=>x[field])
-            .filter(Boolean)
-        )
-    ].sort();
+    const values=[...new Set(allData.map(x=>x[field]).filter(Boolean))].sort();
 
     select.innerHTML='<option value="">全部</option>';
 
     values.forEach(v=>{
-        select.innerHTML+=`<option>${v}</option>`;
+        select.innerHTML+=`<option value="${v}">${v}</option>`;
     });
 
     select.addEventListener("change",search);
 }
 
-function clearOne(id){
+function attachBinding(){
 
+    document.getElementById("english").addEventListener("change",e=>{
+        if(lock) return;
+        lock=true;
+
+        const v=e.target.value;
+        document.getElementById("cover").value = mapENtoCover[v] || "";
+
+        lock=false;
+    });
+
+    document.getElementById("cover").addEventListener("change",e=>{
+        if(lock) return;
+        lock=true;
+
+        const v=e.target.value;
+        document.getElementById("english").value = mapCovertoEN[v] || "";
+
+        lock=false;
+    });
+}
+
+function clearOne(id){
     document.getElementById(id).value="";
     search();
-
 }
 
 function resetAll(){
-
     document.getElementById("cover").value="";
     document.getElementById("english").value="";
     document.getElementById("ratchet").value="";
     document.getElementById("bit").value="";
-
     search();
 }
 
@@ -182,33 +229,21 @@ function search(){
     const ratchet=document.getElementById("ratchet").value;
     const bit=document.getElementById("bit").value;
 
-    if(cover)
-        rows=rows.filter(x=>x["上蓋"]===cover);
+    if(cover) rows=rows.filter(x=>x["上蓋"]===cover);
+    if(english) rows=rows.filter(x=>x["英文"]===english);
+    if(ratchet) rows=rows.filter(x=>x["固鎖"]===ratchet);
+    if(bit) rows=rows.filter(x=>x["軸"]===bit);
 
-    if(english)
-        rows=rows.filter(x=>x["英文"]===english);
+    rows.sort((a,b)=>new Date(b["日期"]) - new Date(a["日期"]));
 
-    if(ratchet)
-        rows=rows.filter(x=>x["固鎖"]===ratchet);
-
-    if(bit)
-        rows=rows.filter(x=>x["軸"]===bit);
-
-    rows.sort((a,b)=>
-        new Date(b["日期"]) - new Date(a["日期"])
-    );
-
-    let html="";
-
-    html+=`<h2>查詢結果 (${rows.length}筆)</h2>`;
+    let html=`<h2>查詢結果 (${rows.length}筆)</h2>`;
 
     html+=`
     <table>
     <tr>
         <th>英文</th>
         <th>上蓋</th>
-        <th>固鎖</th>
-        <th>軸</th>
+        <th>組合</th>
         <th>名次</th>
         <th>日期</th>
     </tr>
@@ -220,8 +255,10 @@ function search(){
         <tr>
             <td>${r["英文"]||""}</td>
             <td>${r["上蓋"]||""}</td>
-            <td>${r["固鎖"]||""}</td>
-            <td>${r["軸"]||""}</td>
+            <td>
+                <span class="ratchet">${r["固鎖"]||""}</span>
+                <span class="bit">${r["軸"]||""}</span>
+            </td>
             <td>${r["名次"]||""}</td>
             <td>${r["日期"]||""}</td>
         </tr>
@@ -233,38 +270,23 @@ function search(){
     const comboStat={};
 
     rows.forEach(r=>{
-
-        const key=
-            (r["固鎖"]||"")+
-            " "+
-            (r["軸"]||"");
-
+        const key=(r["固鎖"]||"")+" "+(r["軸"]||"");
         comboStat[key]=(comboStat[key]||0)+1;
-
     });
 
-    const topCombo=
-        Object.entries(comboStat)
+    const topCombo=Object.entries(comboStat)
         .sort((a,b)=>b[1]-a[1])
         .slice(0,10);
 
-    html+=`
-    <div class="box">
-    <h2>最常搭配組合 TOP 10</h2>
-    `;
+    html+=`<div class="box"><h2>最常搭配 TOP 10</h2>`;
 
     topCombo.forEach((r,i)=>{
-
-        html+=`
-        ${i+1}. ${r[0]} (${r[1]}次)<br>
-        `;
-
+        html+=`${i+1}. ${r[0]} (${r[1]}次)<br>`;
     });
 
     html+=`</div>`;
 
     document.getElementById("result").innerHTML=html;
-
 }
 
 </script>
