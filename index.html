@@ -7,15 +7,70 @@
 
 <style>
 body{
-    font-family: Arial,sans-serif;
-    max-width:1200px;
+    font-family:Arial,sans-serif;
+    max-width:1400px;
     margin:auto;
     padding:20px;
 }
-.card{
+
+h1{
+    margin-bottom:20px;
+}
+
+.filters{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+}
+
+.filter-box{
     border:1px solid #ddd;
-    padding:20px;
+    padding:10px;
     border-radius:8px;
+}
+
+select{
+    width:100%;
+    padding:8px;
+}
+
+button{
+    padding:8px 12px;
+    cursor:pointer;
+    margin-top:5px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:left;
+}
+
+th{
+    background:#f2f2f2;
+}
+
+.box{
+    background:#f7f7f7;
+    padding:15px;
+    margin-top:20px;
+    border-radius:8px;
+}
+
+.reset{
+    margin-top:15px;
+}
+
+@media(max-width:900px){
+    .filters{
+        grid-template-columns:1fr;
+    }
 }
 </style>
 
@@ -24,31 +79,193 @@ body{
 
 <h1>Beyblade Combo</h1>
 
-<div class="card">
-    <h3>資料載入狀態</h3>
-    <div id="status">載入中...</div>
+<div id="status">載入中...</div>
+
+<div class="filters">
+
+<div class="filter-box">
+    <b>上蓋</b><br>
+    <select id="cover"></select>
+    <button onclick="clearOne('cover')">❌ 清除</button>
 </div>
+
+<div class="filter-box">
+    <b>英文</b><br>
+    <select id="english"></select>
+    <button onclick="clearOne('english')">❌ 清除</button>
+</div>
+
+<div class="filter-box">
+    <b>固鎖</b><br>
+    <select id="ratchet"></select>
+    <button onclick="clearOne('ratchet')">❌ 清除</button>
+</div>
+
+<div class="filter-box">
+    <b>軸</b><br>
+    <select id="bit"></select>
+    <button onclick="clearOne('bit')">❌ 清除</button>
+</div>
+
+</div>
+
+<button class="reset" onclick="resetAll()">🔄 重設全部條件</button>
+
+<div id="result"></div>
 
 <script>
 
+let allData=[];
+
 fetch("data.json")
-.then(r => r.json())
-.then(data => {
+.then(r=>r.json())
+.then(data=>{
 
-    document.getElementById("status").innerHTML =
-        "✅ 成功載入 " + data.length + " 筆資料";
+    allData=data;
 
-    console.log(data);
+    document.getElementById("status").innerHTML=
+        "✅ 成功載入 "+data.length+" 筆資料";
 
-})
-.catch(err => {
+    buildSelect("cover","上蓋");
+    buildSelect("english","英文");
+    buildSelect("ratchet","固鎖");
+    buildSelect("bit","軸");
 
-    document.getElementById("status").innerHTML =
-        "❌ 載入失敗";
-
-    console.error(err);
+    search();
 
 });
+
+function buildSelect(id,field){
+
+    const select=document.getElementById(id);
+
+    const values=[
+        ...new Set(
+            allData
+            .map(x=>x[field])
+            .filter(Boolean)
+        )
+    ].sort();
+
+    select.innerHTML='<option value="">全部</option>';
+
+    values.forEach(v=>{
+        select.innerHTML+=`<option>${v}</option>`;
+    });
+
+    select.addEventListener("change",search);
+}
+
+function clearOne(id){
+
+    document.getElementById(id).value="";
+    search();
+
+}
+
+function resetAll(){
+
+    document.getElementById("cover").value="";
+    document.getElementById("english").value="";
+    document.getElementById("ratchet").value="";
+    document.getElementById("bit").value="";
+
+    search();
+}
+
+function search(){
+
+    let rows=[...allData];
+
+    const cover=document.getElementById("cover").value;
+    const english=document.getElementById("english").value;
+    const ratchet=document.getElementById("ratchet").value;
+    const bit=document.getElementById("bit").value;
+
+    if(cover)
+        rows=rows.filter(x=>x["上蓋"]===cover);
+
+    if(english)
+        rows=rows.filter(x=>x["英文"]===english);
+
+    if(ratchet)
+        rows=rows.filter(x=>x["固鎖"]===ratchet);
+
+    if(bit)
+        rows=rows.filter(x=>x["軸"]===bit);
+
+    rows.sort((a,b)=>
+        new Date(b["日期"]) - new Date(a["日期"])
+    );
+
+    let html="";
+
+    html+=`<h2>查詢結果 (${rows.length}筆)</h2>`;
+
+    html+=`
+    <table>
+    <tr>
+        <th>英文</th>
+        <th>上蓋</th>
+        <th>固鎖</th>
+        <th>軸</th>
+        <th>名次</th>
+        <th>日期</th>
+    </tr>
+    `;
+
+    rows.forEach(r=>{
+
+        html+=`
+        <tr>
+            <td>${r["英文"]||""}</td>
+            <td>${r["上蓋"]||""}</td>
+            <td>${r["固鎖"]||""}</td>
+            <td>${r["軸"]||""}</td>
+            <td>${r["名次"]||""}</td>
+            <td>${r["日期"]||""}</td>
+        </tr>
+        `;
+    });
+
+    html+="</table>";
+
+    const comboStat={};
+
+    rows.forEach(r=>{
+
+        const key=
+            (r["固鎖"]||"")+
+            " "+
+            (r["軸"]||"");
+
+        comboStat[key]=(comboStat[key]||0)+1;
+
+    });
+
+    const topCombo=
+        Object.entries(comboStat)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,10);
+
+    html+=`
+    <div class="box">
+    <h2>最常搭配組合 TOP 10</h2>
+    `;
+
+    topCombo.forEach((r,i)=>{
+
+        html+=`
+        ${i+1}. ${r[0]} (${r[1]}次)<br>
+        `;
+
+    });
+
+    html+=`</div>`;
+
+    document.getElementById("result").innerHTML=html;
+
+}
 
 </script>
 
